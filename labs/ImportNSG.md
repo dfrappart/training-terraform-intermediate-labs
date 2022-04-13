@@ -9,7 +9,7 @@ In this lab, you will learn how to import resource and let Terraform manage thei
 After you complete this lab, you will be able to:
 
 -   Import a Network Security Group
--   Understand how Terraform handles existing infrastrucutre using import
+-   Understand how Terraform handles existing infrastructure using import
 
 ## Instructions
 
@@ -30,7 +30,7 @@ git clone https://github.com/smartinez-cellenza/training-terraform-intermediate-
 cd training-terraform-intermediate-labs-setup
 ```
 
-> This template contains a basic Terraform project configuration
+> This configuration contains a basic Terraform project configuration
 
 In the *configuration/dev* folder, update the **backend.hcl** file :
 
@@ -39,7 +39,7 @@ In the *configuration/dev* folder, update the **backend.hcl** file :
 - **container_name**       = "tfstates"
 - **key**                  = "import.tfstate"
 
-> This template use Partial backend configuration. The Storage Account just created is used for tfstate file persistence
+> This configuration use Partial backend configuration. The Storage Account just created is used for tfstate file persistence
 
 In the *configuration/dev* folder, update the *dev.tfvars* file :
 
@@ -67,7 +67,7 @@ az network nsg create --name "importdemo-nsg" --resource-group $resourceGroupNam
 
 We will add rule to this Network Security Group
 
-Create a deny rule over TCP for a specific IP adress range
+Create a rule over TCP for a specific IP adress range
 
 ```powershell
 az network nsg rule create -g $resourceGroupName `
