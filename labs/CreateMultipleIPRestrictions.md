@@ -21,7 +21,7 @@ After you complete this lab, you will be able to:
 
 ### Exercise 1: Setup your environment
 
-In your *main* Resource Group (the one tagged with attribute **layer** with value **main**), create a Storage Account, with a Blob container nammed **tfstate**
+In your *main* Resource Group (the one tagged with attribute **layer** with value **main**), create a Storage Account, with a Blob container named **tfstate**
 
 Clone the repository https://github.com/smartinez-cellenza/training-terraform-intermediate-labs-setup
 
