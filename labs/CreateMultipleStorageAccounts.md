@@ -150,6 +150,8 @@ variable "storage_account_names" {
 
 in the *configuration/dev* folder, update the *dev.tfvars* file content. Remove the previous value of **storage_account_names** and add the following block
 
+**Warning!**: Due to the DNS replication, storage name cannot be reused just after destro. To avoid issue during the lab, ensure that the storage name are changedbefore re-creating new storage.
+
 ```hcl
 storage_account_names = {
     "a_unique_storage_account_name" = {
