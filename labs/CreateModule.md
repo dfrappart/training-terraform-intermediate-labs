@@ -218,7 +218,7 @@ Run the following commands to create resources :
 
 ```powershell
 terraform apply -var-file="..\configuration\dev\dev.tfvars"
-terraform apply -var-file="..\configuration\dev\dev.tfvars"
+
 ```
 
 > Notice the success of the Apply
