@@ -92,37 +92,44 @@ ip_restrictions = {
 In the *main.tf* file, add the following content
 
 ```hcl
-resource "azurerm_app_service_plan" "self" {
-  name                = "dynamicblockasp"
-  location            = var.location
-  resource_group_name = data.azurerm_resource_group.self.name
+resource "azurerm_service_plan" "AppSvcPlan" {
+  name                = "asp-dynamicblock"
+  location            = data.azurerm_resource_group.main.location
+  resource_group_name = data.azurerm_resource_group.main.name
+  os_type             = "Linux"
+
+  sku_name = "S1"
 
 
-  sku {
-    tier     = "Standard"
-    size     = "S1"
-  }
 }
 
-resource "azurerm_app_service" "self" {
-  name                = "testsmatfdylol"
-  location            = var.location
-  resource_group_name = data.azurerm_resource_group.self.name
-  app_service_plan_id = azurerm_app_service_plan.self.id
+resource "azurerm_linux_web_app" "AppSvc" {
+  name                          = "app-dynamicblock"
+  location                      = data.azurerm_resource_group.self.location
+  resource_group_name           = data.azurerm_resource_group.self.name
+  service_plan_id               = azurerm_service_plan.AppSvcPlan.id
+  
+  
+
 
   site_config {
 
-    scm_use_main_ip_restriction = false
 
     dynamic "ip_restriction" {
       for_each = var.ip_restrictions
+
       content {
+        action     = ip_restriction.value.action
         ip_address = ip_restriction.value.ip_address
         name       = ip_restriction.key
         priority   = ip_restriction.value.priority
-        action     = ip_restriction.value.action
       }
     }
+
+    ip_restriction_default_action     = "Deny"
+    scm_ip_restriction_default_action = "Deny"
+
+
   }
 }
 ```
