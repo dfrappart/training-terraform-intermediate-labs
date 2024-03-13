@@ -210,9 +210,28 @@ terraform apply -var-file="..\configuration\dev\dev.tfvars"
 
 ### Exercise 4: Implicit dependency
 
-In this exercice, we will create a Storage Account Queue for the Storage we have provisionned.
+In this exercice, we will create a new Storage Account Queue for a new Storage created with another module call.
 
 We will create both resources during the same apply of the template, to ensure implicit dependency is well managed
+
+Add the following to your configuration: 
+
+```go
+
+module "storage_dependency" {
+  source = "./modules/storageaccount"
+
+  resource_group_name = data.azurerm_resource_group.self.name
+  storage_name = "another_unique_name_goes_here"
+  container_name = "content"
+}
+
+resource "azurerm_storage_queue" "queue_dependency" {
+  name                 = "myothersamplequeue"
+  storage_account_name = module.storage_dependency.storage_account_full_name
+}
+
+```
 
 Run the following commands to create resources :
 
