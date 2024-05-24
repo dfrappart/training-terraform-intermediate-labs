@@ -120,7 +120,7 @@ terraform state list
 
 > This command can be used to list all the resources present in the tfstate and display their internal name
 
-The name of the resources is suffixed with the Storage Account name.
+The name of the resources is suffixed with the vnet name.
 
 Update the attribute name of the `azurerm_virtual_network` block
 

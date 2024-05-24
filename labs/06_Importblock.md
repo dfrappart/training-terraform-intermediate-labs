@@ -690,7 +690,7 @@ moved {
 
 ```
 
-Ib the present case, we are considering moving the subnets in a terraform declaration with a `for_each` meta argument. We will add the following moved block:
+In the present case, we are considering moving the subnets in a terraform declaration with a `for_each` meta argument. We will add the following moved block:
 
 ```go
 
