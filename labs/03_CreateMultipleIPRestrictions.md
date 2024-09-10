@@ -98,7 +98,7 @@ resource "azurerm_service_plan" "AppSvcPlan" {
   resource_group_name = data.azurerm_resource_group.main.name
   os_type             = "Linux"
 
-  sku_name = "S1"
+  sku_name = "B1"
 
 
 }
