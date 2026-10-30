@@ -8,8 +8,8 @@ In this lab, you will learn how to use an ARM template inside Terraform.
 
 After you complete this lab, you will be able to:
 
--   Deploy a Virutal Network using Terraform and ARM
--   Understand Terraform limitations and work-arounds
+- Deploy a Virutal Network using Terraform and ARM
+- Understand Terraform limitations and work-arounds
 
 ## Instructions
 
@@ -23,7 +23,7 @@ After you complete this lab, you will be able to:
 
 In your *main* Resource Group (the one tagged with attribute **layer** with value **main**), create a Storage Account, with a Blob container named **tfstate**
 
-Clone the repository https://github.com/smartinez-cellenza/training-terraform-intermediate-labs-setup
+Clone the repository <https://github.com/smartinez-cellenza/training-terraform-intermediate-labs-setup>
 
 ```bash
 git clone https://github.com/smartinez-cellenza/training-terraform-intermediate-labs-setup.git

@@ -1,53 +1,94 @@
-# Setup environment
+# Lab overview
 
-## Lab overview
+In this lab, you will learn how to deploy multiple resources of same type using a loop in a single block.We will be deploying all resources into the same subscription (*main*).
 
-In this lab, you will learn how to deploy multiple resources of the same type in a single block.
+- [Lab overview](#lab-overview)
+  - [Objectives](#objectives)
+  - [Instructions](#instructions)
+    - [Before you start](#before-you-start)
+    - [Exercise 1: Setup your environment (*tfstate* and project template)](#exercise-1-setup-your-environment-tfstate-and-project-template)
+      - [Backend](#backend)
+      - [Variables](#variables)
+    - [Exercise 2: Deploy multiple storage accounts using a set](#exercise-2-deploy-multiple-storage-accounts-using-a-set)
+      - [Variable set](#variable-set)
+      - [Provider](#provider)
+      - [Resources](#resources)
+      - [Deploy](#deploy)
+      - [Examine the tfstate](#examine-the-tfstate)
+      - [`each.value` or `each.key`?](#eachvalue-or-eachkey)
+      - [Remove resources](#remove-resources)
+    - [Exercise 3: Deploy multiple storage accounts using a map](#exercise-3-deploy-multiple-storage-accounts-using-a-map)
+      - [Resources](#resources-1)
+      - [Deploy](#deploy-1)
+      - [Examine the tfstate](#examine-the-tfstate-1)
+      - [Remove resources](#remove-resources-1)
 
 ## Objectives
 
 After you complete this lab, you will be able to:
 
--   Create multiple Storage Accounts in a single block
--   Understand how Terraform handles loops
+- Create multiple Storage Accounts within a single block,
+- Understand how Terraform handles loops.
 
 ## Instructions
 
 ### Before you start
 
-- Ensure Terraform (version >= 1.0.0) is installed and available from system's PATH.
+- Ensure Terraform (version ~> 1.13) is installed and available from system's PATH.
 - Ensure Azure CLI is installed.
 - Check your access to the Azure Subscriptions and Resource Groups provided for this training.
 
-### Exercise 1: Setup your environment
+### Exercise 1: Setup your environment (*tfstate* and project template)
 
-In your *main* Resource Group (the one tagged with attribute **layer** with value **main**), create a Storage Account, with a Blob container named **tfstate**
+1/ Create the container for *tfstate*
 
-Clone the repository https://github.com/smartinez-cellenza/training-terraform-intermediate-labs-setup
+In your *main* Resource Group (the one tagged with `layer` = `main`), create a Storage Account, with a Blob container named `tfstate` to store the *tfstate* file.
+
+2/ Get project template
+
+Clone the repository https://github.com/Anne-Gaelle-Cellenza/training-terraform-intermediate-labs-setup
 
 ```bash
-git clone https://github.com/smartinez-cellenza/training-terraform-intermediate-labs-setup.git
+git clone https://github.com/Anne-Gaelle-Cellenza/training-terraform-intermediate-labs-setup.git
 cd training-terraform-intermediate-labs-setup
 ```
 
-> This template contains a basic Terraform project configuration
+> This template contains a basic Terraform project configuration that:
+>
+> - uses a `data` resource group,
+> - defines two variables `resource_group_name` and `location`,
+> - contains a `configuration\dev` folder with *backend* and *tfvars* for dev.
 
-In the *configuration/dev* folder, update the **backend.hcl** file :
+3/ Configure the project template to use your environment
 
-- **resource_group_name**  = "the_name_of_your_main_resource_group"
-- **storage_account_name** = "the_name_of_the_storage_account_you_just_created"
-- **container_name**       = "tfstates"
-- **key**                  = "deploymultiplesa.tfstate"
+#### Backend
 
-> This template use Partial backend configuration. The Storage Account just created is used for tfstate file persistence
+The project template uses a partial backend configuration: we don't define the backend configuration in the `terraform` block but in an external file, read at `terraform init` time.
 
-In the *configuration/dev* folder, update the *dev.tfvars* file :
+In the *configuration/dev* folder, update the `backend.hcl` file as:
 
-- **resource_group_name** = "the_name_of_your_main_resource_group"
+```hcl
+  resource_group_name  = "the_name_of_your_main_resource_group"
+  storage_account_name = "the_name_of_the_storage_account_you_just_created"
+  container_name      = "tfstate"
+  key                 = "deploymultiplesa.tfstate"
+```
 
-### Exercise 2: Deploy multiple Storage Accounts using a set
+> Define your backend using the Storage Account you created few minutes ago.
 
-In the **variables.tf** file, add a new variable
+#### Variables
+
+In the *configuration/dev* folder, update the `dev.tfvars` file:
+
+```hcl
+resource_group_name = "the_name_of_your_main_resource_group"
+```
+
+### Exercise 2: Deploy multiple storage accounts using a set
+
+#### Variable set
+
+In the `variables.tf` file, add a new variable:
 
 ```hcl
 variable "storage_account_names" {
@@ -56,22 +97,38 @@ variable "storage_account_names" {
 }
 ```
 
-> This variable is a set of string. It can only contains unique values.
+> This variable is a set of string. It can only contain unique values.
+> We will be using this variable to define the names of the (set of) Storage Accounts to create.
 
-> We will use this variable to handle the names of the Storage Account to create
-
-in the *configuration/dev* folder, add to the *dev.tfvars* file the variable value :
+Define (a set of) values for the new variable in `dev.tfvars` under *configuration/dev* folder as:
 
 ```hcl
-storage_account_names = ["a_unique_storage_account_name","another_unique_storage_account_name","a_third_unique_storage_account_name"]
+storage_account_names = [
+  "a_unique_storage_account_name",
+  "another_unique_storage_account_name",
+  "a_third_unique_storage_account_name"
+]
 ```
 
-> Storage Accounts have a public FQDN, based on their names. The Storage Account names should be globally unique accross all Azure Resources
+> Storage Accounts have a public FQDN based on their names. This requires the Storage Account names to be globally unique accross all Azure Resources.
 
-In the *main.tf* file, add the following **resource** block to reference the feature Resource Group
+#### Provider
+
+**IMPORTANT**
+We will be targeting here a deployment to what we used to call the *main* subscription in previous lab *01_DeployToMultipleSubscription*.
+**Verify that the file `provider.tf` has the required provider block to address the creation of the resources.**
+
+#### Resources
+
+Reference the resource group to use (in *main* subscription) and add the Storage Account `resource` block in `main.tf` file:
 
 ```hcl
+data "azurerm_resource_group" "self" {
+  name = var.resource_group_name
+}
+
 resource "azurerm_storage_account" "example" {
+  # we are looping on each value of storage_account_names
   for_each                 = var.storage_account_names
   name                     = each.key
   resource_group_name      = data.azurerm_resource_group.self.name
@@ -81,57 +138,100 @@ resource "azurerm_storage_account" "example" {
 }
 ```
 
-> Notice the for_each attribute. Its value is the set we added in the variables
+> Note the `for_each` meta-argument in the storage account resource block:
+>
+> - it loops on the set of values we defined in `variables.tf`,
+> - it uses `each.key` to get the name of every Storage Account.
+>
+> The `for_each` meta-argument accepts a set or a map, i.e. a collection value that has one element for each repetition.
+>
+> With `for_each`, Terraform creates an additional `each` object that can be used in expressions anf that two attributes:
+>
+> - `each.key`
+> - `each.value`.
+>
+> In case a **set** is provided, `each.key` = `each.value`.
+>
+> To prevent unexpected behavior during conversion, the `for_each` argument does not implicitly convert lists or tuples (lists accepting elements of different types) to sets. Use Terraform expressions and functions to derive a suitable value (e.g. `flatten()` to get a list from a complex object and next `tomap()` to convert the list to a input map for `for_each`).
 
-> The name attribute of the Storage Account is each.key, referencing the occurence of the item in the set used in the for_each argument
+#### Deploy
 
+Run the following commands to initialize your terraform environment and deploy the resources:
 
-Run the following commands in **src** folder to deploy Storage Accounts :
+PowerShell
 
 ```powershell
 az login
 az account set --subscription "the_main_subscription_id"
 $env:ARM_SUBSCRIPTION_ID="the_main_subscription_id"
-cd src
+# use the '-reconfigure' option in case you already configured your local folder with a different backend (e.g. from previous labs)
 terraform init -backend-config="..\configuration\dev\backend.hcl" -reconfigure
 terraform apply -var-file="..\configuration\dev\dev.tfvars" -auto-approve
 ```
 
-> Check in the Azure Portal that the Storage Accounts have been created
+Bash
 
-Run the following command
+```bash
+az login
+az account set --subscription "the_main_subscription_id"
+export ARM_SUBSCRIPTION_ID="the_main_subscription_id"
+# use the '-reconfigure' option in case you already configured your local folder with a different backend (e.g. from previous labs)
+terraform init -backend-config="..\configuration\dev\backend.hcl" -reconfigure
+terraform apply -var-file="..\configuration\dev\dev.tfvars" -auto-approve
+```
+
+> Check in the Azure Portal the created Storage Accounts.
+
+#### Examine the tfstate
+
+To examine resources present in the *tfstate* file, you can run the following command:
 
 ```powershell
 terraform state list
 ```
 
-> This command can be used to list all the resources present in the tfstate and display their internal name
+Check the name of the resources which is suffixed with the storage account name.
 
-The name of the resources is suffixed with the Storage Account name.
+> The `terraform state list` command can be used to list all the resources present in the *tfstate* file, and to display their internal (terraform) name.
 
-Update the attribute name of the azurerm_storage_account block
+#### `each.value` or `each.key`?
+
+Update the name attribute of the `azurerm_storage_account` block to use `each.value` instead of `each.key`:
 
 ```hcl
-name                     = each.value
+resource "azurerm_storage_account" "example" {
+  for_each                 = var.storage_account_names
+  
+  # we are now using each.value i/o each.key for the name
+  name                     = each.value
+  resource_group_name      = data.azurerm_resource_group.self.name
+  location                 = var.location
+  account_tier             = "Standard"
+  account_replication_type = "GRS"
+}
 ```
 
-Run the following commands to deploy Storage Accounts :
+Run the following commands to update the configuration:
 
 ```powershell
 terraform apply -var-file="..\configuration\dev\dev.tfvars" -auto-approve
 ```
 
-Terraform does not identify any change. Since the value in the for_each is a set, **each.key** and **each.value** are the same
+Terraform does not identify any change. This is due to the type of input we gave to `for_each`: with a **set** input, `each.key` and `each.value` refer to the same value.
 
-Remove the Storage Account using the command
+#### Remove resources
+
+Remove the resources using the command:
 
 ```powershell
 terraform destroy -var-file="..\configuration\dev\dev.tfvars" -auto-approve
 ```
 
-### Exercise 3: Deploy multiple Storage Accounts using a map
+### Exercise 3: Deploy multiple storage accounts using a map
 
-In the **variables.tf** file, update the **storage_account_name** definition
+#### Resources
+
+In the `variables.tf` file, update the `storage_account_names` variable definition:
 
 ```hcl
 variable "storage_account_names" {
@@ -143,14 +243,11 @@ variable "storage_account_names" {
 }
 ```
 
-> This variable is now a map of object
+> This variable is now a map of objects.
+>
+> Using a map allows you to specify multiple attributes for each item. In most real life cases, not only name needs to be defined for items such as in previous exercise, but also various attributes.
 
-> Using a map allow to specify multiple attributes for each item. In most real life case, not only name needs to be defined, but also various attributes.
-
-
-in the *configuration/dev* folder, update the *dev.tfvars* file content. Remove the previous value of **storage_account_names** and add the following block
-
-**Warning!**: Due to the DNS replication, storage name cannot be reused just after destro. To avoid issue during the lab, ensure that the storage name are changedbefore re-creating new storage.
+in the *configuration/dev* folder, update the `dev.tfvars` file content and replace the value of `storage_account_names` with:
 
 ```hcl
 storage_account_names = {
@@ -169,13 +266,14 @@ storage_account_names = {
 }
 ```
 
-> Storage Accounts have a public FQDN, based on their names. The Storage Account names should be globally unique accross all Azure Resources
+> Storage Accounts have a public FQDN based on their names. This requires the Storage Account names to be globally unique accross all Azure Resources.
 
-In the *main.tf* file, replace the **resource** block by this one
+In `main.tf` file, replace the `resource` block with this one:
 
 ```hcl
 resource "azurerm_storage_account" "example" {
-  for_each                 = var.storage_account_names
+  for_each = var.storage_account_names
+  
   name                     = each.key
   resource_group_name      = data.azurerm_resource_group.self.name
   location                 = each.value.location
@@ -184,34 +282,30 @@ resource "azurerm_storage_account" "example" {
 }
 ```
 
-> Notice the for_each attribute. Its value is the map we added in the variables
+> Now the `for_each` meta-argument is looping over a map, so having different values for `each.key` and `each.value`:
+>
+> - `each.key` is used for the Storage Account name,
+> - `each.value` (and its attributes) is used for location and replication type.
+>
+> Using a map adds more variabilisation for the input attributes!
 
-> The name attribute of the Storage Account is each.key.
+#### Deploy
 
-> location used the location attribute we defined in the map. This attribute can now be variabilised
-
-> account_replication_type used the account_replication_type attribute we defined in the map. This attribute can now be variabilised
-
-
-Run the following commands to deploy Storage Accounts :
+Run the following commands to deploy the resources:
 
 ```powershell
 terraform apply -var-file="..\configuration\dev\dev.tfvars" -auto-approve
 ```
 
-> Check in the Azure Portal that the Storage Accounts have been created
+> Check in the Azure Portal the created storage accounts.
 
-Run the following command
+#### Examine the tfstate
 
-```powershell
-terraform state list
-```
+Run the `terraform state list` again and oberve the changes.
 
-> This command can be used to list all the resources present in the tfstate and display their internal name
+#### Remove resources
 
-The name of the resources is suffixed with the Storage Account name.
-
-Remove the Storage Account using the command
+Remove the resources using the command:
 
 ```powershell
 terraform destroy -var-file="..\configuration\dev\dev.tfvars" -auto-approve
